@@ -36,11 +36,6 @@ func ProcessCommand(commandArg string, storage store.Store) string {
 	if len(tokens) == 0 {
 		return "-Error: Empty command\r\n"
 	}
-
-	for _, t := range tokens {
-		fmt.Println(t)
-	}
-
 	cmd := strings.ToUpper(tokens[0])
 
 	switch cmd {

@@ -39,10 +39,10 @@ func (vs *vaultServer) Run() {
 	if err != nil {
 		log.Fatal("Error listening:", err)
 	}
-
 	defer vs.listener.Close()
 
 	fmt.Printf("Vault server running on port: %d\n", vs.port)
+
 	for vs.running {
 		conn, err := vs.listener.Accept()
 		if err != nil {
@@ -51,8 +51,10 @@ func (vs *vaultServer) Run() {
 		}
 		go handleConnection(conn, vs.storage)
 	}
+
 	fmt.Println("Vault server is shutting down")
 }
+
 func (vs *vaultServer) ShutDown() {
 	fmt.Printf("Vault server shutting down\n")
 }
@@ -62,7 +64,6 @@ func handleConnection(conn net.Conn, storage store.Store) {
 
 	reader := bufio.NewReader(conn)
 	for {
-
 		commandArg, err := reader.ReadString('\n')
 		if err != nil {
 			if err == io.EOF {
@@ -72,7 +73,6 @@ func handleConnection(conn net.Conn, storage store.Store) {
 			}
 			return
 		}
-
 		res := handler.ProcessCommand(commandArg, storage)
 		if _, err := conn.Write([]byte(res)); err != nil {
 			log.Printf("Server write error: %v", err)
