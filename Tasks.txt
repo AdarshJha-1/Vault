@@ -1,0 +1,4 @@
+TODO
+
+1. [x] create a tcp socket server which listen for client command
+2. [x] store, server, basic functions
