@@ -11,16 +11,15 @@ type Store interface {
 }
 
 type store struct {
-	mu     *sync.RWMutex
+	mu     sync.RWMutex
 	ky_val map[string]string
 	list   map[string][]string
 }
 
 func GetStore() Store {
 	return &store{
-		mu:     &sync.RWMutex{},
-		ky_val: map[string]string{},
-		list:   map[string][]string{},
+		ky_val: make(map[string]string),
+		list:   make(map[string][]string),
 	}
 }
 

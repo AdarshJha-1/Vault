@@ -2,11 +2,17 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 
 	"github.com/AdarshJha-1/Vault/internal/server"
 	"github.com/AdarshJha-1/Vault/internal/store"
+	"github.com/AdarshJha-1/Vault/internal/wal"
+)
+
+const (
+	walLogDir = "data/wal"
 )
 
 func main() {
@@ -22,7 +28,16 @@ func main() {
 	}
 
 	storage := store.GetStore()
-	srv := server.GetVaultServer(port, storage)
+	newWal, err := wal.OpenWAL(walLogDir, 16*1024*1024, 10)
+	if err != nil {
+		log.Fatal("Error::", err)
+	}
+
+	err = newWal.LoadToVault(storage)
+	if err != nil {
+		log.Fatal("Error::", err)
+	}
+	srv := server.GetVaultServer(port, storage, newWal)
 	srv.Run()
 	defer srv.ShutDown()
 }

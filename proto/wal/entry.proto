@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package wal;
+
+option go_package = "./wal";
+
+message WALEntry {
+    uint64 lsn = 1;
+    string command = 2;
+    uint32 crc = 3;
+}

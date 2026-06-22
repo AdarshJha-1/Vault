@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/AdarshJha-1/Vault/internal/store"
+	"github.com/AdarshJha-1/Vault/internal/wal"
 )
 
 func handlePing() string {
@@ -31,11 +32,13 @@ func handleGet(tokens []string, storage store.Store) string {
 	return fmt.Sprintf("$ %s \r\n %s \r\n", strconv.Itoa(len(value)), value)
 }
 
-func ProcessCommand(commandArg string, storage store.Store) string {
+func ProcessCommand(commandArg string, storage store.Store, wal wal.WAL) string {
 	tokens := strings.Fields(commandArg)
 	if len(tokens) == 0 {
 		return "-Error: Empty command\r\n"
 	}
+
+	wal.WriteEntry(commandArg)
 	cmd := strings.ToUpper(tokens[0])
 
 	switch cmd {

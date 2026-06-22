@@ -10,6 +10,7 @@ import (
 
 	"github.com/AdarshJha-1/Vault/internal/handler"
 	"github.com/AdarshJha-1/Vault/internal/store"
+	"github.com/AdarshJha-1/Vault/internal/wal"
 )
 
 type Server interface {
@@ -22,13 +23,15 @@ type vaultServer struct {
 	listener net.Listener
 	running  bool
 	storage  store.Store
+	wal      wal.WAL
 }
 
-func GetVaultServer(port int, storage store.Store) Server {
+func GetVaultServer(port int, storage store.Store, wal wal.WAL) Server {
 	return &vaultServer{
 		port:    port,
 		running: true,
 		storage: storage,
+		wal:     wal,
 	}
 }
 
@@ -49,7 +52,7 @@ func (vs *vaultServer) Run() {
 			log.Println("Error accepting conn:", err)
 			continue
 		}
-		go handleConnection(conn, vs.storage)
+		go handleConnection(conn, vs.storage, vs.wal)
 	}
 
 	fmt.Println("Vault server is shutting down")
@@ -59,7 +62,7 @@ func (vs *vaultServer) ShutDown() {
 	fmt.Printf("Vault server shutting down\n")
 }
 
-func handleConnection(conn net.Conn, storage store.Store) {
+func handleConnection(conn net.Conn, storage store.Store, wal wal.WAL) {
 	defer conn.Close()
 
 	reader := bufio.NewReader(conn)
@@ -73,7 +76,7 @@ func handleConnection(conn net.Conn, storage store.Store) {
 			}
 			return
 		}
-		res := handler.ProcessCommand(commandArg, storage)
+		res := handler.ProcessCommand(commandArg, storage, wal)
 		if _, err := conn.Write([]byte(res)); err != nil {
 			log.Printf("Server write error: %v", err)
 		}
