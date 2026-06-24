@@ -32,6 +32,17 @@ func handleGet(tokens []string, storage store.Store) string {
 	return fmt.Sprintf("$ %s \r\n %s \r\n", strconv.Itoa(len(value)), value)
 }
 
+func handleDelete(tokens []string, storage store.Store) string {
+	if len(tokens) < 2 {
+		return "-Error: DEL requires a key\r\n"
+	}
+	ok := storage.Delete(tokens[1])
+	if !ok {
+		return "$-1\r\n"
+	}
+	return "+OK\r\n"
+}
+
 func ProcessCommand(commandArg string, storage store.Store, wal wal.WAL) string {
 	tokens := strings.Fields(commandArg)
 	if len(tokens) == 0 {
@@ -48,6 +59,8 @@ func ProcessCommand(commandArg string, storage store.Store, wal wal.WAL) string 
 		return handleSet(tokens, storage)
 	case "GET":
 		return handleGet(tokens, storage)
+	case "DEL":
+		return handleDelete(tokens, storage)
 	default:
 		return "-Error: Unknown command\r\n"
 	}

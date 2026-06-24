@@ -28,6 +28,7 @@ func main() {
 	}
 
 	storage := store.GetStore()
+
 	newWal, err := wal.OpenWAL(walLogDir, 16*1024*1024, 10)
 	if err != nil {
 		log.Fatal("Error::", err)
@@ -37,7 +38,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Error::", err)
 	}
+
 	srv := server.GetVaultServer(port, storage, newWal)
 	srv.Run()
-	defer srv.ShutDown()
 }

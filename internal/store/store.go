@@ -8,6 +8,7 @@ type Store interface {
 	// Key/Val
 	Set(key, value string)
 	Get(key string) (string, bool)
+	Delete(key string) bool
 }
 
 type store struct {
@@ -34,4 +35,18 @@ func (s *store) Get(key string) (string, bool) {
 	defer s.mu.RUnlock()
 	value, ok := s.ky_val[key]
 	return value, ok
+}
+
+func (s *store) Delete(key string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if _, exists := s.ky_val[key]; exists {
+		delete(s.ky_val, key)
+	}
+
+	if _, exists := s.ky_val[key]; exists {
+		return false
+	}
+	return true
 }
