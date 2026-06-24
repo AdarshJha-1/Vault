@@ -136,9 +136,10 @@ func (w *wal) LoadToVault(storage store.Store) error {
 			if len(commandParts) >= 3 {
 				if strings.ToUpper(commandParts[0]) == "SET" {
 					storage.Set(commandParts[1], commandParts[2])
+				} else if strings.ToUpper(commandParts[0]) == "DEL" {
+					storage.Delete(commandParts[1])
 				}
 			}
-
 			maxLSN = max(maxLSN, entry.GetLsn())
 		}
 
