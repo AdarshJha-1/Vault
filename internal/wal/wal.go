@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
 
 	"github.com/AdarshJha-1/Vault/internal/store"
@@ -20,6 +21,7 @@ const (
 type WAL interface {
 	LoadToVault(storage store.Store) error
 	WriteEntry(command string)
+	Close() error
 }
 
 type wal struct {
@@ -80,6 +82,10 @@ func OpenWAL(directory string, maxFileSize int64, maxSegments int) (WAL, error) 
 	}, nil
 }
 
+func (w *wal) Close() error {
+	return w.currSegment.Close()
+}
+
 // i think WAL can be standalone thing but i am not that smart i am mixing all up in one code only no segregation
 func (w *wal) LoadToVault(storage store.Store) error {
 	files, err := filepath.Glob(filepath.Join(w.directory, segmentPrefix+"*"))
@@ -125,7 +131,7 @@ func (w *wal) LoadToVault(storage store.Store) error {
 				break
 			}
 
-			fmt.Printf("%+v\n", entry)
+			// do all the SET command replay here
 		}
 	}
 	return nil
@@ -150,6 +156,12 @@ func (w *wal) WriteEntry(command string) {
 	}
 	length := uint32(len(entryBytes))
 
+	entrySize := 4 + length
+	segStat, _ := w.currSegment.Stat()
+	if segStat.Size()+int64(entrySize) > w.maxFileSize {
+		w.rotate()
+	}
+
 	err = binary.Write(w.currSegment, binary.LittleEndian, length)
 	if err != nil {
 		return
@@ -164,4 +176,49 @@ func (w *wal) WriteEntry(command string) {
 		return
 	}
 
+}
+
+// this create new seg file with all checking and set it in WAL struct
+func (w *wal) rotate() error {
+
+	// first close the current open segment file
+	w.Close()
+
+	files, err := filepath.Glob(filepath.Join(w.directory, segmentPrefix+"*"))
+	if err != nil {
+		return err
+	}
+	// increase the segment no
+	w.currSegmentNo += 1
+
+	// here i remove the starting seg no. file like if i have like this seg-0, 1, 2, 3...9 i will remove 0th one i can get it but  len(files) - maxSeg
+
+	if len(files) == w.maxSegments {
+		fileToDelete := segmentPrefix + strconv.Itoa(w.currSegmentNo-w.maxSegments)
+		err := os.Remove(filepath.Join(w.directory, fileToDelete))
+		if err != nil {
+			return err
+		}
+	}
+	newSeg, err := createNewSegmentFile(w.directory, w.currSegmentNo)
+	if err != nil {
+		return err
+	}
+
+	err = newSeg.Close()
+	if err != nil {
+		return err
+	}
+
+	filePath := filepath.Join(w.directory, fmt.Sprintf("%s%d", segmentPrefix, w.currSegmentNo))
+	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	if _, err := file.Seek(0, io.SeekEnd); err != nil {
+		return err
+	}
+
+	w.currSegment = file
+	return nil
 }
