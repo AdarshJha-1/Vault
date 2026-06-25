@@ -49,17 +49,22 @@ func ProcessCommand(commandArg string, storage store.Store, wal wal.WAL) string 
 		return "-Error: Empty command\r\n"
 	}
 
-	wal.WriteEntry(commandArg)
 	cmd := strings.ToUpper(tokens[0])
 
 	switch cmd {
 	case "PING":
 		return handlePing()
 	case "SET":
+		if err := wal.WriteEntry(commandArg); err != nil {
+			return "-ERR WAL write failed\r\n"
+		}
 		return handleSet(tokens, storage)
 	case "GET":
 		return handleGet(tokens, storage)
 	case "DEL":
+		if err := wal.WriteEntry(commandArg); err != nil {
+			return "-ERR WAL write failed\r\n"
+		}
 		return handleDelete(tokens, storage)
 	default:
 		return "-Error: Unknown command\r\n"

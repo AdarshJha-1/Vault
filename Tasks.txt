@@ -2,5 +2,6 @@ TODO
 
 1. [x] create a tcp socket server which listen for client command
 2. [x] store, server, basic functions
-3. [_] Add WAL
+3. [x] Add WAL
+3. [x] Refine WAL
 4. [_] LRU

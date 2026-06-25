@@ -59,7 +59,13 @@ func (vs *vaultServer) Run() {
 }
 
 func (vs *vaultServer) ShutDown() {
-	fmt.Printf("Vault server shutting down\n")
+	vs.running = false
+	if vs.listener != nil {
+		vs.listener.Close()
+	}
+	if vs.wal != nil {
+		vs.wal.Close()
+	}
 }
 
 func handleConnection(conn net.Conn, storage store.Store, wal wal.WAL) {

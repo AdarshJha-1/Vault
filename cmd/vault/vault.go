@@ -1,10 +1,14 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
+	"time"
 
 	"github.com/AdarshJha-1/Vault/internal/server"
 	"github.com/AdarshJha-1/Vault/internal/store"
@@ -14,6 +18,21 @@ import (
 const (
 	walLogDir = "data/wal"
 )
+
+func graceFullShutdown(done chan bool) {
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	<-ctx.Done()
+
+	log.Println("shutting down gracefully, press Ctrl-C again to force")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	done <- true
+
+}
 
 func main() {
 	port := 5555
@@ -40,5 +59,12 @@ func main() {
 	}
 
 	srv := server.GetVaultServer(port, storage, newWal)
-	srv.Run()
+
+	done := make(chan os.Signal, 1)
+	signal.Notify(done, syscall.SIGINT, syscall.SIGTERM)
+	go srv.Run()
+
+	<-done
+	fmt.Printf("Vault server shutting down\n")
+	srv.ShutDown()
 }

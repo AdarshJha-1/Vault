@@ -21,7 +21,7 @@ const (
 
 type WAL interface {
 	LoadToVault(storage store.Store) error
-	WriteEntry(command string)
+	WriteEntry(command string) error
 	Close() error
 }
 
@@ -149,7 +149,7 @@ func (w *wal) LoadToVault(storage store.Store) error {
 	return nil
 }
 
-func (w *wal) WriteEntry(command string) {
+func (w *wal) WriteEntry(command string) error {
 	w.lock.Lock()
 	defer w.lock.Unlock()
 
@@ -164,7 +164,7 @@ func (w *wal) WriteEntry(command string) {
 
 	entryBytes, err := proto.Marshal(entry)
 	if err != nil {
-		return
+		return err
 	}
 	length := uint32(len(entryBytes))
 
@@ -173,24 +173,24 @@ func (w *wal) WriteEntry(command string) {
 	if segStat.Size()+int64(entrySize) > w.maxFileSize {
 		err := w.rotate()
 		if err != nil {
-			return
+			return err
 		}
 	}
 
 	err = binary.Write(w.currSegment, binary.LittleEndian, length)
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = w.currSegment.Write(entryBytes)
 	if err != nil {
-		return
+		return err
 	}
 
 	if err := w.currSegment.Sync(); err != nil {
-		return
+		return err
 	}
-
+	return nil
 }
 
 func (w *wal) rotate() error {
