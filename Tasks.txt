@@ -5,3 +5,5 @@ TODO
 3. [x] Add WAL
 3. [x] Refine WAL
 4. [_] LRU
+
+5. [_] Trying to add benchmarking
