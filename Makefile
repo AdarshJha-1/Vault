@@ -2,7 +2,7 @@ BINARY_NAME=vault
 BUILD_DIR=bin
 APP_DIR=./cmd/vault
 
-.PHONY: all build run clean test tidy
+.PHONY: all build run clean test tidy bench
 
 all: build
 
@@ -26,3 +26,7 @@ test:
 tidy:
 	@echo "Tidying modules..."
 	go mod tidy
+
+bench:
+	@echo "Running benchmarks..."
+	go test -bench=. -benchmem ./...

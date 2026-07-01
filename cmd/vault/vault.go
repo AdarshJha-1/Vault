@@ -1,38 +1,20 @@
 package main
 
 import (
-	"context"
 	"fmt"
+	"github.com/AdarshJha-1/Vault/internal/server"
+	"github.com/AdarshJha-1/Vault/internal/store"
+	"github.com/AdarshJha-1/Vault/internal/wal"
 	"log"
 	"os"
 	"os/signal"
 	"strconv"
 	"syscall"
-	"time"
-
-	"github.com/AdarshJha-1/Vault/internal/server"
-	"github.com/AdarshJha-1/Vault/internal/store"
-	"github.com/AdarshJha-1/Vault/internal/wal"
 )
 
 const (
 	walLogDir = "data/wal"
 )
-
-func graceFullShutdown(done chan bool) {
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
-
-	<-ctx.Done()
-
-	log.Println("shutting down gracefully, press Ctrl-C again to force")
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	done <- true
-
-}
 
 func main() {
 	port := 5555
@@ -46,7 +28,7 @@ func main() {
 		}
 	}
 
-	storage := store.GetStore()
+	storage := store.GetStore(1000)
 
 	newWal, err := wal.OpenWAL(walLogDir, 16*1024*1024, 10)
 	if err != nil {

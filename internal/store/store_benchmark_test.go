@@ -6,14 +6,14 @@ import (
 )
 
 func BenchmarkSetKV(b *testing.B) {
-	storage := GetStore()
+	storage := GetStore(b.N)
 
 	for i := 0; i < b.N; i++ {
 		storage.Set(strconv.Itoa(i), "uwu")
 	}
 }
 func BenchmarkGetKV(b *testing.B) {
-	storage := GetStore()
+	storage := GetStore(b.N)
 	keys := make([]string, b.N)
 	for i := 0; i < b.N; i++ {
 		keys[i] = strconv.Itoa(i)
@@ -27,7 +27,7 @@ func BenchmarkGetKV(b *testing.B) {
 	}
 }
 func BenchmarkDeleteKV(b *testing.B) {
-	storage := GetStore()
+	storage := GetStore(b.N)
 	keys := make([]string, b.N)
 	for i := 0; i < b.N; i++ {
 		keys[i] = strconv.Itoa(i)

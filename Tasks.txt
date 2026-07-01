@@ -4,6 +4,6 @@ TODO
 2. [x] store, server, basic functions
 3. [x] Add WAL
 3. [x] Refine WAL
-4. [_] LRU
+4. [x] LRU
 
 5. [_] Trying to add benchmarking

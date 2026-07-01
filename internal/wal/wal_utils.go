@@ -6,6 +6,7 @@ import (
 	"hash/crc32"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -40,11 +41,11 @@ func createCRC(lastSequenceNo uint64, command string) uint32 {
 	binary.LittleEndian.PutUint64(
 		lsnBuf[:],
 		lastSequenceNo,
-	)
+		)
 
 	crc := crc32.ChecksumIEEE(
 		append(lsnBuf[:], []byte(command)...),
-	)
+		)
 	return crc
 }
 
@@ -53,10 +54,26 @@ func verifyCRC(lastSequenceNo uint64, command string, actualCRC uint32) bool {
 	binary.LittleEndian.PutUint64(
 		lsnBuf[:],
 		lastSequenceNo,
-	)
+		)
 
 	crc := crc32.ChecksumIEEE(
 		append(lsnBuf[:], []byte(command)...),
-	)
+		)
 	return crc == actualCRC
+}
+
+func findSegmentID(path string) (int, error) {
+	_, fileName := filepath.Split(path)
+
+	return strconv.Atoi(
+		strings.TrimPrefix(fileName, segmentPrefix),
+	)
+}
+
+func sortSegmentFiles(files []string) {
+	sort.Slice(files, func(i, j int) bool {
+		id1, _ := findSegmentID(files[i])
+		id2, _ := findSegmentID(files[j])
+		return id1 < id2
+	})
 }

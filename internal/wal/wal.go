@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"sync"
 
@@ -92,8 +91,7 @@ func (w *wal) LoadToVault(storage store.Store) error {
 		return nil
 	}
 
-	// TODO have to change this sort thing
-	sort.Strings(files)
+	sortSegmentFiles(files)
 
 	var maxLSN uint64 = 0
 	for _, file := range files {
@@ -206,8 +204,7 @@ func (w *wal) rotate() error {
 
 	w.currSegmentNo += 1
 
-	// TODO here too
-	sort.Strings(files)
+	sortSegmentFiles(files)
 
 	if len(files) == w.maxSegments {
 		err := os.Remove(files[0])

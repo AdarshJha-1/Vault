@@ -1,14 +1,14 @@
 # Vault
 
-Vault is an in-memory key-value store written in Go with persistence through a Write-Ahead Log (WAL).
+Vault is an in-memory key-value store written in Go.
 
-The project is inspired by systems such as Redis and focuses on understanding how storage engines, persistence, crash recovery, and concurrent data structures work internally.
+I built this project to understand how systems like Redis work internally instead of treating them as a black box. The focus was learning storage engines, persistence, crash recovery, caching, concurrency, and networking by implementing them from scratch.
+
+---
 
 ## Features
 
-### Key-Value Operations
-
-Supported commands:
+### Supported Commands
 
 ```text
 PING
@@ -28,20 +28,32 @@ PING
 
 ---
 
-### Concurrent In-Memory Store
+## In-Memory Store
 
-- Thread-safe key-value storage
-- Uses `sync.RWMutex`
-- Multiple readers can access data concurrently
-- Writers acquire exclusive access
+Vault stores data completely in memory.
+
+Current implementation:
+
+- Thread-safe using `sync.RWMutex`
+- O(1) GET, SET and DELETE
+- Hash map + doubly linked list
+- LRU (Least Recently Used) eviction
+- Configurable maximum capacity
+
+The LRU cache keeps recently accessed keys at the front of the list. Once the configured capacity is reached, the least recently used key is automatically evicted.
 
 ---
 
-### TCP Server
+## TCP Server
 
-- Custom TCP server implementation
-- Handles multiple client connections concurrently using goroutines
-- Text-based command protocol
+The server is built using Go's `net` package.
+
+Features:
+
+- Multiple client support
+- One goroutine per connection
+- Simple text-based command protocol
+- Graceful shutdown
 
 Example:
 
@@ -51,19 +63,11 @@ nc localhost 5555
 
 ---
 
-### Write-Ahead Logging (WAL)
+## Write-Ahead Log (WAL)
 
-Every command is persisted before execution.
+Every write operation is written to disk before modifying memory.
 
-WAL entry format:
-
-```text
-+------------+------------------+
-| Length (4) | Protobuf Payload |
-+------------+------------------+
-```
-
-Each entry contains:
+Each WAL entry contains:
 
 ```protobuf
 message WALEntry {
@@ -75,32 +79,19 @@ message WALEntry {
 
 Fields:
 
-| Field   | Purpose              |
-| ------- | -------------------- |
-| LSN     | Log Sequence Number  |
-| Command | Original command     |
-| CRC     | Corruption detection |
+| Field   | Description                             |
+| ------- | --------------------------------------- |
+| LSN     | Log Sequence Number                     |
+| Command | Original command                        |
+| CRC     | CRC32 checksum for corruption detection |
+
+Protocol Buffers are used to serialize WAL entries.
 
 ---
 
-### Crash Recovery
+## WAL Segments
 
-On startup Vault:
-
-1. Opens WAL directory
-2. Loads all WAL segments
-3. Validates CRC of every entry
-4. Replays valid commands
-5. Rebuilds in-memory state
-6. Restores latest LSN
-
-This allows data to survive process crashes and restarts.
-
----
-
-### WAL Segmentation
-
-Logs are split into segment files.
+Instead of storing every log in one file, Vault splits logs into segments.
 
 Example:
 
@@ -114,63 +105,66 @@ data/
 
 Benefits:
 
-- Prevents single huge log file
-- Faster startup recovery
+- Prevents one huge log file
+- Faster startup
 - Easier log management
+- Automatic log rotation
 
 ---
 
-### WAL Rotation
+## Crash Recovery
 
-When a segment exceeds the configured size:
+On startup Vault:
 
-```text
-Current Segment Full
-        ↓
-Create New Segment
-        ↓
-Continue Writing
-```
+1. Opens every WAL segment
+2. Reads entries in order
+3. Verifies CRC
+4. Stops if corruption is detected
+5. Replays valid commands
+6. Restores the latest LSN
 
-Old segments are removed when the configured maximum segment count is reached.
+This allows data to survive crashes and process restarts.
 
 ---
 
-### Corruption Detection
+## Corruption Detection
 
-Each WAL entry stores a CRC32 checksum.
+Every WAL entry stores a CRC32 checksum.
 
 During recovery:
 
 ```text
 Read Entry
-    ↓
+     │
+     ▼
 Verify CRC
-    ↓
-Valid ? Replay : Stop
+     │
+ ┌───┴────┐
+ │        │
+Valid   Invalid
+ │        │
+ ▼        ▼
+Replay   Stop Recovery
 ```
 
-This prevents replaying corrupted or partially written entries.
+If the server crashes while writing an entry, recovery safely stops when it encounters:
+
+- `io.EOF`
+- `io.ErrUnexpectedEOF`
+
+This prevents replaying partially written data.
 
 ---
 
-### Recovery from Partial Writes
+## Benchmarks
 
-If Vault crashes while writing:
+Current benchmarks for the in-memory store:
 
-```text
-[length]
-[partial protobuf data]
 ```
-
-Recovery detects:
-
-```go
-io.EOF
-io.ErrUnexpectedEOF
+BenchmarkSetKV      ~482 ns/op
+BenchmarkGetKV      ~163 ns/op
+BenchmarkDeleteKV   ~234 ns/op
 ```
-
-and safely stops reading the damaged portion of the log.
 
 ---
 
@@ -180,7 +174,7 @@ and safely stops reading the damaged portion of the log.
 Vault
 ├── cmd/
 │   └── vault/
-│       └── vault.go
+│       └── main.go
 │
 ├── internal/
 │   ├── handler/
@@ -191,13 +185,24 @@ Vault
 ├── proto/
 │   └── wal/
 │
-└── data/
-    └── wal/
+├── data/
+│   └── wal/
+│
+├── Makefile
+├── README.md
+├── go.mod
+└── go.sum
 ```
 
 ---
 
 ## Build
+
+```bash
+make build
+```
+
+or
 
 ```bash
 go build -o bin/vault ./cmd/vault
@@ -208,13 +213,13 @@ go build -o bin/vault ./cmd/vault
 ## Run
 
 ```bash
-./bin/vault
+make run
 ```
 
 or
 
 ```bash
-go run ./cmd/vault
+./bin/vault
 ```
 
 Custom port:
@@ -229,22 +234,43 @@ go run ./cmd/vault 8080
 
 Implemented:
 
+- [x] Concurrent In-Memory Store
+- [x] LRU Cache
 - [x] TCP Server
-- [x] Concurrent Key-Value Store
-- [x] WAL Persistence
-- [x] Protobuf WAL Entries
-- [x] CRC Validation
+- [x] Multi-client Support
+- [x] Write-Ahead Log (WAL)
 - [x] WAL Replay
 - [x] Crash Recovery
-- [x] Segment Rotation
-- [x] Multi-Client Support
+- [x] WAL Segmentation
+- [x] WAL Rotation
+- [x] CRC32 Validation
+- [x] Graceful Shutdown
+- [x] Benchmarks
 
 Planned:
 
-- [ ] LRU Cache Eviction
 - [ ] Snapshotting
 - [ ] WAL Compaction
 - [ ] TTL Expiration
-- [ ] Benchmarking
+- [ ] RESP Protocol
 - [ ] Unit Tests
-- [ ] RESP Protocol Support
+
+---
+
+## Why I Built This
+
+The goal of Vault wasn't to build another Redis clone. I wanted to understand how a storage engine actually works by implementing the core pieces myself.
+
+Through this project I learned about:
+
+- TCP servers in Go
+- Concurrent programming
+- LRU cache design
+- Write-Ahead Logging
+- Crash recovery
+- Data serialization with Protocol Buffers
+- CRC based corruption detection
+- Log segmentation and rotation
+- Basic storage engine design
+
+The project is still growing as I continue learning more about database internals and distributed systems.
