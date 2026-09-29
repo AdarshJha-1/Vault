@@ -1,42 +1,58 @@
 package store
 
 import (
-	"strconv"
+	"fmt"
 	"testing"
 )
 
-func BenchmarkSetKV(b *testing.B) {
-	storage := GetStore(b.N)
-
+func BenchmarkSet(b *testing.B) {
+	store := GetStore(10000000)
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		storage.Set(strconv.Itoa(i), "uwu")
+		store.Set(fmt.Sprintf("key%d", i), fmt.Sprintf("val%d", i))
 	}
 }
-func BenchmarkGetKV(b *testing.B) {
-	storage := GetStore(b.N)
-	keys := make([]string, b.N)
-	for i := 0; i < b.N; i++ {
-		keys[i] = strconv.Itoa(i)
-		storage.Set(keys[i], "uwu")
-	}
 
+func BenchmarkSetEviction(b *testing.B) {
+	store := GetStore(1000)
 	b.ResetTimer()
-
 	for i := 0; i < b.N; i++ {
-		storage.Get(keys[i])
+		store.Set(fmt.Sprintf("key%d", i), fmt.Sprintf("val%d", i))
 	}
 }
-func BenchmarkDeleteKV(b *testing.B) {
-	storage := GetStore(b.N)
-	keys := make([]string, b.N)
-	for i := 0; i < b.N; i++ {
-		keys[i] = strconv.Itoa(i)
-		storage.Set(keys[i], "uwu")
-	}
 
+func BenchmarkGet(b *testing.B) {
+	store := GetStore(10000)
+	for i := 0; i < 10000; i++ {
+		store.Set(fmt.Sprintf("key%d", i), fmt.Sprintf("val%d", i))
+	}
 	b.ResetTimer()
-
 	for i := 0; i < b.N; i++ {
-		storage.Delete(keys[i])
+		store.Get("key3000")
 	}
+}
+
+// This is not a good way...
+func BenchmarkDelete(b *testing.B) {
+	store := GetStore(10000)
+	for i := 0; i < 10000; i++ {
+		store.Set(fmt.Sprintf("key%d", i), fmt.Sprintf("val%d", i))
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		store.Delete(fmt.Sprintf("key%d", i%10000))
+	}
+}
+
+func BenchmarkConcurrentGet(b *testing.B) {
+	store := GetStore(10000)
+	for i := 0; i < 10000; i++ {
+		store.Set(fmt.Sprintf("key%d", i), fmt.Sprintf("val%d", i))
+	}
+	b.ResetTimer()
+	b.RunParallel(func(p *testing.PB) {
+		for p.Next() {
+			store.Get("key3000")
+		}
+	})
 }

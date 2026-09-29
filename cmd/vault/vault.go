@@ -2,14 +2,15 @@ package main
 
 import (
 	"fmt"
-	"github.com/AdarshJha-1/Vault/internal/server"
-	"github.com/AdarshJha-1/Vault/internal/store"
-	"github.com/AdarshJha-1/Vault/internal/wal"
 	"log"
 	"os"
 	"os/signal"
 	"strconv"
 	"syscall"
+
+	"github.com/AdarshJha-1/Vault/internal/server"
+	"github.com/AdarshJha-1/Vault/internal/store"
+	"github.com/AdarshJha-1/Vault/internal/wal"
 )
 
 const (
