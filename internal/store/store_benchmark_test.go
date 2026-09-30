@@ -56,3 +56,41 @@ func BenchmarkConcurrentGet(b *testing.B) {
 		}
 	})
 }
+
+func BenchmarkConcurrentSet(b *testing.B) {
+	store := GetStore(10000)
+	b.ResetTimer()
+	b.RunParallel(func(p *testing.PB) {
+		i := 0
+		for p.Next() {
+			store.Set(fmt.Sprintf("key%d", i), fmt.Sprintf("val%d", i))
+			i++
+		}
+	})
+}
+
+func BenchmarkMixedWorkload(b *testing.B) {
+	store := GetStore(10000)
+
+	for i := 0; i < 10000; i++ {
+		store.Set(fmt.Sprintf("key%d", i), fmt.Sprintf("val%d", i))
+	}
+
+	b.ResetTimer()
+
+	b.RunParallel(func(p *testing.PB) {
+		i := 0
+		for p.Next() {
+			switch i % 10 {
+			case 0:
+				store.Delete(fmt.Sprintf("key%d", i%10000))
+			case 1, 2:
+				store.Set(fmt.Sprintf("key%d", i%10000), "value")
+			default:
+				store.Get("key3000")
+			}
+			i++
+		}
+	})
+
+}
